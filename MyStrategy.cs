@@ -39,9 +39,100 @@ namespace Com.CodeGame.CodeBall2018.DevKit.CSharpCgdk
         const int NITRO_RESPAWN_TICKS = 10 * TICKS_PER_SECOND;
         const int GRAVITY = 30;
 
-    
-            
-  
+        public static Vector3D DanToPlane(Vector3D point, Vector3D pointOnPlane, Vector3D planeNormal)
+        {
+            return Vector3D.DotProduct(point - pointOnPlane, planeNormal) * planeNormal;
+        }
+
+        public static Vector3D DanToSphereInner(Vector3D point, Vector3D sphereCenter, double sphereRadius)
+        {
+            Vector3D norm = sphereCenter - point;
+            norm.Normalize();
+            return (sphereRadius - (point - sphereCenter).Length) * norm;
+        }
+
+        public static Vector3D DanToSphereOuter(Vector3D point, Vector3D sphereCenter, double sphereRadius)
+        {
+            Vector3D norm = point - sphereCenter;
+            norm.Normalize();
+            return ((point - sphereCenter).Length - sphereRadius) * norm;
+        }
+
+        public static Vector3D Min (Vector3D v1, Vector3D v2)
+        {
+            if (v1.Length >= v2.Length)
+            {
+                return v1;
+            }
+            return v2;
+        }
+
+        public static Vector3D DanToArenaQuarter(Vector3D point, Arena arena)
+        {
+            // Ground
+            Vector3D dan = DanToPlane(point, new Vector3D(0, 0, 0), new Vector3D(0, 1, 0));
+            // Ceiling
+            dan = Min(dan, DanToPlane(point, new Vector3D(0, arena.height, 0), new Vector3D(0, -1, 0)));
+            // Side x
+            dan = Min(dan, DanToPlane(point, new Vector3D(arena.width / 2, 0, 0), new Vector3D(-1, 0, 0)));
+            // Side z (goal)
+            dan = Min(dan, DanToPlane(point, new Vector3D(0, 0, (arena.depth / 2) + arena.goal_depth), new Vector3D(0, 0, -1)));
+            // Side z
+            Vector3D v = new Vector3D(point.X, point.Y, 0) - new Vector3D((arena.goal_width / 2) - arena.goal_top_radius, arena.goal_height - arena.goal_top_radius, 0);
+            if (point.X >= (arena.goal_width / 2) + arena.goal_side_radius || point.Y >= arena.goal_height + arena.goal_side_radius ||
+            (v.X > 0 && v.Y > 0 && v.Length >= arena.goal_top_radius + arena.goal_side_radius))
+            {
+                dan = Min(dan, DanToPlane(point, new Vector3D(0, 0, arena.depth / 2), new Vector3D(0, 0, -1)));
+            }
+            // Side x & ceiling (goal)
+            if (point.Z >= (arena.depth / 2) + arena.goal_side_radius)
+            {   // x
+                dan = Min(dan, DanToPlane(point, new Vector3D(arena.goal_width / 2, 0, 0), new Vector3D(-1, 0, 0)));
+                // y
+                dan = Min(dan, DanToPlane(point, new Vector3D(0, arena.goal_height, 0), new Vector3D(0, -1, 0)));
+            }
+
+
+
+
+        }
+
+
+        
+       
+
+
+
+
+
+
+
+
+        public static Vector3D DanToArena(Vector3D point)
+        {
+            bool negateX = point.X < 0;
+            bool negateZ = point.Z < 0;
+            if (negateX)
+            {
+                point.X = -point.X;
+            }
+            if (negateZ)
+            {
+                point.Z = -point.Z;
+            }
+            Vector3D result = DanToArenaQurter(point);
+            if (negateX)
+            {
+                result.X = -result.X;
+            }
+            if (negateZ)
+            {
+                result.Z = -result.Z;
+            }
+            return result;
+        }
+
+
         public static void CollideRobots (Robot a, double jumpA, Robot b, double jumpB = 0)
         {
             const double mass = 1 / ROBOT_MASS;
@@ -111,13 +202,27 @@ namespace Com.CodeGame.CodeBall2018.DevKit.CSharpCgdk
             b.velocity_z = bVel.Z;
         }
 
- 
+        public static void CollideArena(Ball b)
+        {
+
+        }
+
+        function collide_with_arena(e: Entity):
+let distance, normal = dan_to_arena(e.position)
+let penetration = e.radius - distance
+if penetration > 0:
+e.position += penetration* normal
+let velocity = dot(e.velocity, normal) - e.radius_change_speed
+if velocity< 0:
+e.velocity -= (1 + e.arena_e) * velocity* normal
+return normal
+return None
 
 
 
         public void Act(Robot me, Rules rules, Game game, Action action)
         {
-            
+                
         }
     }
 }
