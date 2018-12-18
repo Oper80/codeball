@@ -39,76 +39,81 @@ namespace Com.CodeGame.CodeBall2018.DevKit.CSharpCgdk
         const int NITRO_RESPAWN_TICKS = 10 * TICKS_PER_SECOND;
         const int GRAVITY = 30;
 
-    class Vec3D
+    
+            
+  
+        public static void CollideRobots (Robot a, double jumpA, Robot b, double jumpB = 0)
         {
-            public double X { get; set; }
-            public double Y { get; set; }
-            public double Z { get; set; }
-
-            public Vec3D(double x, double y, double z)
+            const double mass = 1 / ROBOT_MASS;
+            Vector3D vecA = new Vector3D(a.x, a.y, a.z);
+            Vector3D vecB = new Vector3D(b.x, b.y, b.z);
+            Vector3D aVel = new Vector3D(a.velocity_x, a.velocity_y, a.velocity_z);
+            Vector3D bVel = new Vector3D(b.velocity_x, b.velocity_y, b.velocity_z);
+            Vector3D deltaPosition = vecB - vecA;
+            double distance = deltaPosition.Length;
+            double penetration = a.radius + b.radius - distance;
+            if (penetration > 0)
             {
-                this.X = x;
-                this.Y = y;
-                this.Z = z;
-            }
-
-            public double Len()
-            {
-                return Sqrt(this.X * this.X + this.Y * this.Y + this.Z * this.Z);
-            }
-
-            public Vec3D Normalize()
-            {
-                double d = (1.0 / this.Len());
-
-                return new Vec3D(this.X * d, this.Y * d, this.Z * d);
-            }
-
-            public static Vec3D operator +(Vec3D v1, Vec3D v2)
-            {
-                return new Vec3D(v1.X + v2.X, v1.Y + v2.Y, v1.Z + v2.Z);
-            }
-            
-                public static Vec3D operator -(Vec3D v1, Vec3D v2)
-            {
-                return new Vec3D(v1.X - v2.X, v1.Y - v2.Y, v1.Z - v2.Z);
-            }
-
-            public static Vec3D operator * (Vec3D v, double m)
-            {
-                return new Vec3D(v.X * m, v.Y * m, v.Z * m);
-            }
-            
-            public static void CollideRobots (Robot a, Robot b)
-            {
-                const double mass = 1 / ROBOT_MASS;
-                Vec3D vecA = new Vec3D(a.x, a.y, a.z);
-                Vec3D vecB = new Vec3D(b.x, b.y, b.z);
-                Vec3D deltaPosition = vecB - vecA;
-                double distance = deltaPosition.Len();
-                double penetration = a.radius + b.radius - distance;
-                if (penetration > 0)
+                Vector3D normal = deltaPosition;
+                normal.Normalize();
+                vecA -= normal * penetration * mass;
+                vecB -= normal * penetration * mass;
+                double deltaVelocity = Vector3D.DotProduct(bVel - aVel, normal) + jumpB - jumpA;
+                if (deltaVelocity < 0)
                 {
-                    Vector3D normal = deltaPosition.Normalize();
-                    vecA -= normal * penetration * mass;
-                    vecB -= normal * penetration * mass;
-
+                    System.Random rnd = new System.Random();
+                    Vector3D impulse = (1 + MIN_HIT_E + rnd.NextDouble() * 0.1) * deltaVelocity * normal;
+                    aVel += impulse * mass;
+                    bVel -= impulse * mass;
                 }
+
             }
-
-
-
-
-
-
-let delta_velocity = dot(b.velocity - a.velocity, normal)
-+ b.radius_change_speed - a.radius_change_speed
-if delta_velocity< 0:
-let impulse = (1 + random(MIN_HIT_E, MAX_HIT_E)) * delta_velocity* normal
-a.velocity += impulse* k_a
-b.velocity -= impulse* k_b
-
+            a.velocity_x = aVel.X;
+            a.velocity_y = aVel.Y;
+            a.velocity_z = aVel.Z;
+            b.velocity_x = bVel.X;
+            b.velocity_y = bVel.Y;
+            b.velocity_z = bVel.Z;
         }
+
+        public static void CollideBall(Robot a, double jumpA, Ball b)
+        {
+            const double k_a = (1 / ROBOT_MASS) / ((1 / ROBOT_MASS) + (1 / BALL_MASS));
+            const double k_b = (1 / BALL_MASS) / ((1 / ROBOT_MASS) + (1 / BALL_MASS));
+            Vector3D vecA = new Vector3D(a.x, a.y, a.z);
+            Vector3D vecB = new Vector3D(b.x, b.y, b.z);
+            Vector3D aVel = new Vector3D(a.velocity_x, a.velocity_y, a.velocity_z);
+            Vector3D bVel = new Vector3D(b.velocity_x, b.velocity_y, b.velocity_z);
+            Vector3D deltaPosition = vecB - vecA;
+            double distance = deltaPosition.Length;
+            double penetration = a.radius + b.radius - distance;
+            if (penetration > 0)
+            {
+                Vector3D normal = deltaPosition;
+                normal.Normalize();
+                vecA -= normal * penetration * k_a;
+                vecB -= normal * penetration * k_b;
+                double deltaVelocity = Vector3D.DotProduct(bVel - aVel, normal) - jumpA;
+                if (deltaVelocity < 0)
+                {
+                    System.Random rnd = new System.Random();
+                    Vector3D impulse = (1 + MIN_HIT_E + rnd.NextDouble() * 0.1) * deltaVelocity * normal;
+                    aVel += impulse * k_a;
+                    bVel -= impulse * k_b;
+                }
+
+            }
+            a.velocity_x = aVel.X;
+            a.velocity_y = aVel.Y;
+            a.velocity_z = aVel.Z;
+            b.velocity_x = bVel.X;
+            b.velocity_y = bVel.Y;
+            b.velocity_z = bVel.Z;
+        }
+
+ 
+
+
 
         public void Act(Robot me, Rules rules, Game game, Action action)
         {
